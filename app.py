@@ -30,6 +30,18 @@ def parameters():
         return jsonify(message=f'Sorry, {name}. You are not old enough.'), 404
     else:
         return jsonify(message=f'Welcome, {name}. You are old enough')
+    
+
+# Variable rule matching - clearner URL
+# http://localhost:5000/url_variables/Shiori/17 - {"message": "Sorry, Shiori. You are not old enough."}
+# http://localhost:5000/url_variables/Shiori/19 - { "message": "Welcome, Shiori. You are old enough"}
+@app.route('/url_variables/<string:name>/<int:age>')
+def url_variables(name: str, age:int):
+
+    if age < 18:
+        return jsonify(message=f'Sorry, {name}. You are not old enough.'), 404
+    else:
+        return jsonify(message=f'Welcome, {name}. You are old enough')
 
 
 if __name__ == '__main__':
