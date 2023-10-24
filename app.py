@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 # Start virtual env - planetary-api\scripts\activate
 # flask --app app.py --debug run
@@ -21,6 +21,18 @@ def not_found():
 # Explicit code - 404 (200 is default)
 
 
+@app.route('/parameters')
+def parameters():
+    name = request.args.get('name')
+    age = int(request.args.get('age'))
+
+    if age < 18:
+        return jsonify(message=f'Sorry, {name}. You are not old enough.'), 404
+    else:
+        return jsonify(message=f'Welcome, {name}. You are old enough')
+
+
 if __name__ == '__main__':
     app.run()
+
 
