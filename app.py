@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Float
+from flask_marshmallow import Marshmallow
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 import os
 
 # Start virtual env - planetary-api\scripts\activate
@@ -11,9 +13,12 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 # C:\Users\Shiori.Chiku\OneDrive - InEight\Documents\GitHub\BuildingRESTfulAPIswithFlask (Getting the same path as the app.py)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'planets.db')
 # Built in Flask configuration management system
+app.config['JWT_SECRET_KEY'] = 'super-secret' # Change this URL
 
 
 db = SQLAlchemy(app)
+ma = Marshmallow(app)
+jwt = JWTManager(app)
 
 @app.cli.command('db_create')
 def db_create():
@@ -105,6 +110,54 @@ def url_variables(name: str, age:int):
         return jsonify(message=f'Welcome, {name}. You are old enough')
 
 
+@app.route('/planets', methods=['GET'])
+def planets():
+    planets_list = Planet.query.all()
+    result = planets_schema.dump(planets_list)
+    return jsonify(data=result)
+
+
+@app.route('/register', methods=['POST'])
+def register():
+    email = request.form['email']
+    test = User.query.filter_by(email=email).first()
+    if test:
+        return jsonify(message='That email already exists'), 409
+    else:
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        password = request.form['password']
+
+        user = User(first_name=first_name, 
+                    last_name=last_name, 
+                    email=email,
+                    password=password)
+        
+        db.session.add(user)
+        db.session.commit()
+        return jsonify(message='User created successfully'), 201
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    if request.is_json:
+        email = request.json['email']
+        password = request.json['password']
+
+    else:
+        email = request.form['email']
+        password = request.form['password']
+
+    test = User.query.filter_by(email=email,password=password).first()
+
+    if test:
+        access_token = create_access_token(identity=email)
+        return jsonify(message=f'Login successful', access_token=access_token)
+    else:
+        return jsonify(message='You entered bad email or password'), 401
+
+
+
 # database models
 class User(db.Model):
     __tablename__ = 'users'
@@ -125,6 +178,24 @@ class Planet(db.Model):
     radius = Column(Float)
     distance = Column(Float)
 
+
+
+# Marshmallow Class
+class UserSchema(ma.Schema):
+    class Meta:
+        fields = ('id','first_mame','last_name','email','password')
+
+
+class PlanetSchema(ma.Schema):
+    class Meta:
+        fields = ('planet_id','planet_name','planet_type','home_star','mass','radius','distance')
+
+
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+
+planet_schema = PlanetSchema()
+planets_schema = PlanetSchema(many=True)
 
 
 if __name__ == '__main__':
